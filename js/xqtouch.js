@@ -11,7 +11,7 @@
  * master repository. Currently my branch of XUI is at the following address:
  *
  * http://github.com/SlexAxton/xui
- *
+ *				
  * Alot of the code for this project is taken directly from jQuery 1.3.2 in order to
  * maintain compatibility. I have tried to mark the functions that are copy and pasted
  * from the jquery library as best as possible.
@@ -35,12 +35,7 @@
     
     xq.fn = xq.prototype = {
 	init: function(selector, context) {
-	    return this;
-	},
-	append: function() {
-	    return this;
-	},
-	prepend: function() {
+	    this.xObj = x$(selector);	    
 	    return this;
 	}
     };
@@ -98,12 +93,17 @@
     
     xq.fn.extend({
 	// Webkit specific domready function
-	ready: function(fn) { 
-	    var t = setInterval(function () {
-		if (/^(loaded|complete)$/.test(document.readyState)) {
-		    clearInterval(t), fn();
-		}
-	    }, 0);
+	ready: function(fn) {
+	    this.xObj.on('DOMContentLoaded',fn);
+	    return this;
+	},
+	prepend: function(obj) {
+	    this.xObj.top(obj);
+	    return this;
+	},
+	append: function(obj) {
+	    this.xObj.bottom(obj);
+	    return this;
 	}
     });
     
