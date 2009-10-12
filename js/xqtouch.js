@@ -1,6 +1,8 @@
 /**
  * xqtouch.js
  *
+ * http://github.com/SlexAxton/xqtouch
+ *
  * This script attempts to patch the jquery api used in the jqTouch application
  * onto the xui platform.
  *
