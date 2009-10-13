@@ -17,11 +17,14 @@
  * from the jquery library as best as possible.
  *
  * jQuery (by John Resig | http://ejohn.org) is available at: http://www.jquery.com/
+ *
+ * The hitch function is by Peter Higgins
+ * http://higginsforpresident.net/js/static/jq.hitch.js
+ * and is under Either AFL/New BSD license, see: http://dojotoolkit.org/license
  * 
  * @author  Alex Sexton - AlexSexton@gmail.com | @slexaxton
  *
- * @contributor Paul Irish - paul.irish@gmail.com | @paul_irish
- * @contributor temp01 from -ot
+ * @thanks  Paul Irish - paul.irish@gmail.com | @paul_irish
  * 
  * @license MIT
  * 
@@ -30,9 +33,11 @@
     // For speed and munging
     var window = this,
     document = window.document,
-    undefined,
+    expando = "jQuery" + (+new Date()),
+    uuid = 0,
+    windowData = {},
     
-    xq = jQuery = window.jQuery = window.$ = function( selector, context ) {
+    xq = window.jQuery = window.$ = function( selector, context ) {
 	// The jQuery object is actually just the init constructor 'enhanced'
 	return new xq.fn.init( selector, context );
     };
@@ -48,7 +53,7 @@
     
     xq.fn.init.prototype = xq.fn;
     
-    // jQuery extend function -- needed for jqTouch's use of extend()
+    // jQuery extend function -- added a few things to make jslint pass -- needed for jqTouch's use of extend()
     xq.extend = xq.fn.extend = function() {
 	// copy reference to target object
 	var target = arguments[0] || {}, i = 1, length = arguments.length, deep = false, options;
@@ -60,32 +65,37 @@
 	    i = 2;
 	}
 	// Handle case when target is a string or something (possible in deep copy)
-	if ( typeof target !== "object" && !xq.isFunction(target) )
+	if ( typeof target !== "object" && !xq.isFunction(target) ){
 	    target = {};
+	}
 	// extend jQuery itself if only one argument is passed
 	if ( length == i ) {
 	    target = this;
 	    --i;
 	}
-	for ( ; i < length; i++ )
+	for ( ; i < length; i++ ){
 	    // Only deal with non-null/undefined values
-	    if ( (options = arguments[ i ]) != null )
+	    if ( (options = arguments[ i ]) !== null ){
 		// Extend the base object
 		for ( var name in options ) {
-		    var src = target[ name ], copy = options[ name ];
-		    // Prevent never-ending loop
-		    if ( target === copy )
-			continue;
-		    // Recurse if we're merging object values
-		    if ( deep && copy && typeof copy === "object" && !copy.nodeType )
-			target[ name ] = xq.extend( deep, 
-			    // Never move original objects, clone them
-			    src || ( copy.length != null ? [ ] : { } )
-			, copy );
-		    // Don't bring in undefined values
-		    else if ( copy !== undefined )
-			target[ name ] = copy;
+		    if(name){
+			var src = target[ name ], copy = options[ name ];
+			// Prevent never-ending loop
+			if ( target === copy ){
+			    continue;
+			}
+			// Recurse if we're merging object values
+			if ( deep && copy && typeof copy === "object" && !copy.nodeType ){
+			    target[ name ] = xq.extend(deep, src || ((copy.length !== null) ? [ ] : { }), copy );
+			}
+			// Don't bring in undefined values
+			else if ( copy !== undefined ){
+			    target[ name ] = copy;
+			}
+		    }
 		}
+	    }
+	}
 	// Return the modified object
 	return target;
     };
@@ -93,26 +103,87 @@
     xq.extend({
 	// jQuery isFunction
 	isFunction: function( obj ) {
-		return toString.call(obj) === "[object Function]";
+		return window.toString.call(obj) === "[object Function]";
 	},
-	// Directly out of Peter Higgin's mouth:
-	// http://higginsforpresident.net/js/static/jq.hitch.js
+	// Directly out of Peter Higgin's brain
 	hitch: function(scope, method){
-		// summary: Create a function that will only ever execute in a given scope
-		if(!method){ method = scope; scope = null; }
-		if(typeof method == "string"){
-			scope = scope || window;
-			if(!scope[method]){ throw(['method not found']); }
-			return function(){ return scope[method].apply(scope, arguments || []); };
-		}
-		return !scope ? method : function(){ return method.apply(scope, arguments || []); };
+	    // summary: Create a function that will only ever execute in a given scope
+	    if(!method){ method = scope; scope = null; }
+	    if(typeof method == "string"){
+		scope = scope || window;
+		if(!scope[method]){ throw(['method not found']); }
+		return function(){ return scope[method].apply(scope, arguments || []); };
+	    }
+	    return !scope ? method : function(){ return method.apply(scope, arguments || []); };
 	},
-	support: {}
+	support: {},
+	cache: {},
+	// data and removeData are directly from jQuery
+	data: function( elem, name, data ) {
+	    elem = elem == window ?
+		windowData :
+		elem;
+	    var id = elem[ expando ];
+	    // Compute a unique ID for the element
+	    if ( !id ){
+		id = elem[ expando ] = ++uuid;
+	    }
+	    // Only generate the data cache if we're
+	    // trying to access or manipulate it
+	    if ( name && !xq.cache[ id ] ){
+		xq.cache[ id ] = {};
+	    }
+	    // Prevent overriding the named cache with undefined values
+	    if ( data !== undefined ){
+		xq.cache[ id ][ name ] = data;
+	    }
+	    // Return the named cache data, or the ID for the element
+	    return name ?
+		xq.cache[ id ][ name ] :
+		id;
+	},
+	removeData: function( elem, name ) {
+	    elem = elem == window ?
+		windowData :
+		elem;
+	    var id = elem[ expando ];
+	    // If we want to remove a specific section of the element's data
+	    if ( name ) {
+		if ( xq.cache[ id ] ) {
+		    // Remove the section of cache data
+		    delete xq.cache[ id ][ name ];
+		    // If we've removed all the data, remove the element's cache
+		    name = "";
+		    for ( var t_name in xq.cache[ id ] ){
+			if(t_name){ break; }
+		    }
+		    name = t_name;
+		    if ( !name ){
+			xq.removeData( elem );
+		    }
+		}
+	    // Otherwise, we want to remove all of the element's data
+	    }
+	    else {
+		// Clean up the element expando
+		try {
+		    delete elem[ expando ];
+		} catch(e){
+		    // IE has trouble directly removing the expando
+		    // but it's ok with using removeAttribute
+		    if ( elem.removeAttribute ){
+			elem.removeAttribute( expando );
+		    }
+		}
+		// Completely remove the data cache
+		delete xq.cache[ id ];
+	    }
+	}
     });
     
     xq.fn.extend({
-	// Webkit specific domready function
 	ready: function(fn) {
+	    // Webkit specific domready function
 	    this.xObj.on('DOMContentLoaded',fn);
 	    return this;
 	},
@@ -125,17 +196,26 @@
 	    return this;
 	},
 	live: function(eventType, fn) {
-	    var liveSelector = this.selector;
+	    // Save references to our selector for long-term use
+	    var liveSelector = this.selector,
 	        that         = this;
+	    
+	    // Attach the event to the document
 	    x$(document).on(eventType, function(e){
+		// Get all dom elements that match the selector at this point
 		var currentMatches = x$(liveSelector).elements,
 		    testElem       = e.originalTarget,
 		    exists         = true;
+		    
+		// While we still have elements to test
 		while(exists){
+		    // If the element or it's parents match, run the function
+		    // with the jquery type scope
 		    if (currentMatches.indexOf(testElem) >= 0) {
-			($.hitch(e.originalTarget, fn))(e);
+			(xq.hitch(testElem, fn))(e);
 			return that;
 		    }
+		    // If it doesn't match find a parent, or end the loop
 		    else {
 			if (testElem.parentNode) {
 			    testElem = testElem.parentNode;
@@ -154,21 +234,95 @@
 	},
 	each: function(fn) {
 	    this.xObj.each(function(elem){
-		($.hitch(elem, fn))(elem);
+		// Use xui but change the scope a bit
+		(xq.hitch(elem, fn))(elem);
 	    });
 	},
-	css: function(styleObj){
+	css: function(styleObj, val){
+	    // Check for the case where a key value pair is passed in
+	    if( typeof(styleObj) === "string" ) {
+		var key = styleObj;
+		styleObj = {};
+		styleObj[key] = val;
+	    }
 	    this.xObj.css(styleObj);
 	    return this;
 	},
 	bind: function(eventType, fn) {
 	    this.xObj.each(function(elem){
-		x$(elem).on(eventType, function(e) {
-		    ($.hitch(elem, fn))(e);
-		});
+		// Find this element's events
+		var evs        = xq.data(elem, 'events'),
+		
+		    // Create a function that has the right scope
+		    customFunc = function(e) {
+			(xq.hitch(elem, fn))(e);
+		    };
+		    
+		// If an event has already been added to this elem
+		if (typeof(evs) === "object") {
+		    // If this type of event already exists
+		    if (evs[eventType]) {
+			// Add our event to the list
+			evs[eventType].push(customFunc);
+		    }
+		    else {
+			// Otherwise create our array for the event type
+			evs[eventType] = [customFunc];
+		    }
+		}
+		// Otherwise create the events object and add an entry for our event
+		else {
+		    evs = {};
+		    evs[eventType] = [customFunc];
+		}
+		
+		// Save our events back into our element data
+		xq.data(elem, 'events', evs);
+		
+		// Run this function on this event with xui
+		x$(elem).on(eventType, customFunc);
+		
 	    });
+	    return this;
+	},
+	unbind: function(eventString) {
+	    // Obtain an array of all events needing unbinding
+	    var event_list = eventString.split(' ');
+	    
+	    this.xObj.each(function(elem){
+		// Get all the events objects currently attached to the element
+		var bound_evs = xq.data(elem, 'events');
+		
+		// Go through each event in the list passed in
+		for(var ev in event_list) {
+		    // If this event is present in the currently attached events
+		    if(bound_evs[event_list[ev]]) {
+			// Go through each function that is attached to the elements event
+			for (var fn in bound_evs[event_list[ev]]){
+			    // If it's present
+			    if (bound_evs[event_list[ev]][fn]) {
+				console.log(event_list[ev], bound_evs[event_list[ev]][fn]);
+				// Pass the event string and the bound function reference into the remove function
+				elem.removeEventListener(event_list[ev], bound_evs[event_list[ev]][fn], false);
+			    }
+			}
+			// Remove the event from the data cache
+			delete(bound_evs[event_list[ev]]);
+		    }
+		}
+	    });
+	    return this;
+	},
+	data: function(name, data) {
+	    // Handle setting data
+	    if (data !== undefined) {
+		this.xObj.each(function(elem){
+		    xq.data(elem, name, data);
+		});
+		return this;
+	    }
+	    // Handle returning data
+	    return xq.data(this.xObj.elements[0],name);
 	}
     });
-    
 })(this.x$);
-
