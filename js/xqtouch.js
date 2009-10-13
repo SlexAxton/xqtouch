@@ -118,7 +118,7 @@
 	},
 	support: {},
 	cache: {},
-	// data and removeData are directly from jQuery
+	// data is directly from jQuery
 	data: function( elem, name, data ) {
 	    elem = elem == window ?
 		windowData :
@@ -141,43 +141,6 @@
 	    return name ?
 		xq.cache[ id ][ name ] :
 		id;
-	},
-	removeData: function( elem, name ) {
-	    elem = elem == window ?
-		windowData :
-		elem;
-	    var id = elem[ expando ];
-	    // If we want to remove a specific section of the element's data
-	    if ( name ) {
-		if ( xq.cache[ id ] ) {
-		    // Remove the section of cache data
-		    delete xq.cache[ id ][ name ];
-		    // If we've removed all the data, remove the element's cache
-		    name = "";
-		    for ( var t_name in xq.cache[ id ] ){
-			if(t_name){ break; }
-		    }
-		    name = t_name;
-		    if ( !name ){
-			xq.removeData( elem );
-		    }
-		}
-	    // Otherwise, we want to remove all of the element's data
-	    }
-	    else {
-		// Clean up the element expando
-		try {
-		    delete elem[ expando ];
-		} catch(e){
-		    // IE has trouble directly removing the expando
-		    // but it's ok with using removeAttribute
-		    if ( elem.removeAttribute ){
-			elem.removeAttribute( expando );
-		    }
-		}
-		// Completely remove the data cache
-		delete xq.cache[ id ];
-	    }
 	}
     });
     
@@ -301,7 +264,7 @@
 			for (var fn in bound_evs[event_list[ev]]){
 			    // If it's present
 			    if (bound_evs[event_list[ev]][fn]) {
-				console.log(event_list[ev], bound_evs[event_list[ev]][fn]);
+				//console.log(event_list[ev], bound_evs[event_list[ev]][fn]);
 				// Pass the event string and the bound function reference into the remove function
 				elem.removeEventListener(event_list[ev], bound_evs[event_list[ev]][fn], false);
 			    }
