@@ -19,6 +19,10 @@
  * jQuery (by John Resig | http://ejohn.org) is available at: http://www.jquery.com/
  * 
  * @author  Alex Sexton - AlexSexton@gmail.com | @slexaxton
+ *
+ * @contributor Paul Irish - paul.irish@gmail.com | @paul_irish
+ * @contributor temp01 from -ot
+ * 
  * @license MIT
  * 
  */
@@ -35,6 +39,8 @@
     
     xq.fn = xq.prototype = {
 	init: function(selector, context) {
+	    this.selector = selector;
+	    this.context  = context;
 	    this.xObj = x$(selector);	    
 	    return this;
 	}
@@ -88,7 +94,20 @@
 	// jQuery isFunction
 	isFunction: function( obj ) {
 		return toString.call(obj) === "[object Function]";
-	}
+	},
+	// Directly out of Peter Higgin's mouth:
+	// http://higginsforpresident.net/js/static/jq.hitch.js
+	hitch: function(scope, method){
+		// summary: Create a function that will only ever execute in a given scope
+		if(!method){ method = scope; scope = null; }
+		if(typeof method == "string"){
+			scope = scope || window;
+			if(!scope[method]){ throw(['method not found']); }
+			return function(){ return scope[method].apply(scope, arguments || []); };
+		}
+		return !scope ? method : function(){ return method.apply(scope, arguments || []); };
+	},
+	support: {}
     });
     
     xq.fn.extend({
@@ -104,11 +123,52 @@
 	append: function(obj) {
 	    this.xObj.bottom(obj);
 	    return this;
+	},
+	live: function(eventType, fn) {
+	    var liveSelector = this.selector;
+	        that         = this;
+	    x$(document).on(eventType, function(e){
+		var currentMatches = x$(liveSelector).elements,
+		    testElem       = e.originalTarget,
+		    exists         = true;
+		while(exists){
+		    if (currentMatches.indexOf(testElem) >= 0) {
+			($.hitch(e.originalTarget, fn))(e);
+			return that;
+		    }
+		    else {
+			if (testElem.parentNode) {
+			    testElem = testElem.parentNode;
+			}
+			else {
+			    exists = false;
+			}
+		    }
+		}
+		return that;
+	    });
+	},
+	trigger: function(eventString) {
+	    // yikes
+	    return this;
+	},
+	each: function(fn) {
+	    this.xObj.each(function(elem){
+		($.hitch(elem, fn))(elem);
+	    });
+	},
+	css: function(styleObj){
+	    this.xObj.css(styleObj);
+	    return this;
+	},
+	bind: function(eventType, fn) {
+	    this.xObj.each(function(elem){
+		x$(elem).on(eventType, function(e) {
+		    ($.hitch(elem, fn))(e);
+		});
+	    });
 	}
     });
-    
-    // Naive support object
-    xq.support = {};
     
 })(this.x$);
 
