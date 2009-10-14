@@ -167,11 +167,11 @@
 	    x$(document).on(eventType, function(e){
 		// Get all dom elements that match the selector at this point
 		var currentMatches = x$(liveSelector).elements,
-		    testElem       = e.originalTarget,
+		    testElem       = (event.target.nodeType === 3) ? e.target.parentNode : (e.srcElement || document),
 		    exists         = true;
 		    
 		// While we still have elements to test
-		while(exists){
+		while(exists && testElem){
 		    // If the element or it's parents match, run the function
 		    // with the jquery type scope
 		    if (currentMatches.indexOf(testElem) >= 0) {
@@ -180,7 +180,7 @@
 		    }
 		    // If it doesn't match find a parent, or end the loop
 		    else {
-			if (testElem.parentNode) {
+			if (testElem && testElem.parentNode) {
 			    testElem = testElem.parentNode;
 			}
 			else {
@@ -264,7 +264,7 @@
 			for (var fn in bound_evs[event_list[ev]]){
 			    // If it's present
 			    if (bound_evs[event_list[ev]][fn]) {
-				//console.log(event_list[ev], bound_evs[event_list[ev]][fn]);
+				console.log(event_list[ev], bound_evs[event_list[ev]][fn]);
 				// Pass the event string and the bound function reference into the remove function
 				elem.removeEventListener(event_list[ev], bound_evs[event_list[ev]][fn], false);
 			    }
