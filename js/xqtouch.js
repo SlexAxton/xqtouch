@@ -205,9 +205,11 @@
 	    });
 	},
 	trigger: function(eventString, _origElem) {
+	    var passed_origElem = _origElem;
 	    this.xObj.each(function(elem) {
 		// Save the source element so we can set srcElement (bubbling/event delegation)
-		_origElem = _origElem || elem;
+		// Use a variable outside of the each() loop so it doesn't override the setting for the next iteration
+		_origElem = passed_origElem || elem;
 		try {
 		    // Grab the events that are stored in the data object for each element
 		    var events = xq.data(elem, 'events')[eventString];
