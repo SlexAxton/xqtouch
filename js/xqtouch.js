@@ -36,7 +36,6 @@
     expando = "jQuery" + (+new Date()),
     uuid = 0,
     windowData = {},
-    
     xq = window.jQuery = window.$ = function( selector, context ) {
 	// The jQuery object is actually just the init constructor 'enhanced'
 	return new xq.fn.init( selector, context );
@@ -44,9 +43,14 @@
     
     xq.fn = xq.prototype = {
 	init: function(selector, context) {
-	    this.selector = selector;
+	    // Save our sheesh
+	    this.selector = (typeof(selector) === "string") ? selector.split(/\s*,\s*/) : selector;
 	    this.context  = context;
-	    this.xObj = x$(selector);	    
+	    
+	    // Use xui to make the actual selection
+	    this.xObj = x$(selector);
+	    
+	    // Chain of fools
 	    return this;
 	}
     };
@@ -100,6 +104,7 @@
 	return target;
     };
     
+    // Extend the $ namespace
     xq.extend({
 	// jQuery isFunction
 	isFunction: function( obj ) {
@@ -144,18 +149,24 @@
 	}
     });
     
+    // Extend the plugin namespace
     xq.fn.extend({
 	ready: function(fn) {
 	    // Webkit specific domready function
 	    this.xObj.on('DOMContentLoaded',fn);
 	    return this;
 	},
-	prepend: function(obj) {
-	    this.xObj.top(obj);
+	append: function(obj) {
+	    // This uses a modified call inside of xui - we could write it here instead
+	    // but I think xui should really have a working append function.
+	    this.xObj.append(obj);
 	    return this;
 	},
-	append: function(obj) {
-	    this.xObj.bottom(obj);
+	appendTo: function(obj) {
+	    var base = x$(obj);
+	    this.xObj.each(function(elem){
+		base.append(elem);
+	    });
 	    return this;
 	},
 	live: function(eventType, fn) {
@@ -163,18 +174,20 @@
 	    var liveSelector = this.selector,
 	        that         = this;
 	    
-	    // Attach the event to the document
-	    x$(document).on(eventType, function(e){
+	    // Bind the event to the document
+	    xq(document).bind(eventType, function(e){
 		// Get all dom elements that match the selector at this point
 		var currentMatches = x$(liveSelector).elements,
-		    testElem       = (event.target.nodeType === 3) ? e.target.parentNode : (e.srcElement || document),
+		    testElem       = (e.target.nodeType === 3) ? e.target.parentNode : (e.srcElement || document),
 		    exists         = true;
 		    
 		// While we still have elements to test
 		while(exists && testElem){
 		    // If the element or it's parents match, run the function
 		    // with the jquery type scope
+		    
 		    if (currentMatches.indexOf(testElem) >= 0) {
+			// Not going to worry about passing the fake event in here, since no one uses it.
 			(xq.hitch(testElem, fn))(e);
 			return that;
 		    }
@@ -191,8 +204,31 @@
 		return that;
 	    });
 	},
-	trigger: function(eventString) {
-	    // yikes
+	trigger: function(eventString, _origElem) {
+	    this.xObj.each(function(elem) {
+		// Save the source element so we can set srcElement (bubbling/event delegation)
+		_origElem = _origElem || elem;
+		try {
+		    // Grab the events that are stored in the data object for each element
+		    var events = xq.data(elem, 'events')[eventString];
+		    for (var i in events) {
+			// If the event arrays contain functions, run them.
+			if (typeof(events[i]) === "function") {
+			    // -How to we pass the event object here?
+			    // -If this is a native event (the only one in jqtouch source looks like $.submit()) what should we do?
+			    // Fake some event data to make live work
+			    (xq.hitch(_origElem, events[i]))({target:{nodeType:1}, srcElement: _origElem});
+			}
+		    }
+		    
+		} catch(err) {
+		    // Ignore errors for elements without actions defined for the event
+		}
+		// Bubbling (Should we make this switchable like in jQuery?)
+		if (elem.parentNode) {
+		    xq(elem.parentNode).trigger(eventString, _origElem);
+		}
+	    });
 	    return this;
 	},
 	each: function(fn) {
@@ -264,7 +300,6 @@
 			for (var fn in bound_evs[event_list[ev]]){
 			    // If it's present
 			    if (bound_evs[event_list[ev]][fn]) {
-				console.log(event_list[ev], bound_evs[event_list[ev]][fn]);
 				// Pass the event string and the bound function reference into the remove function
 				elem.removeEventListener(event_list[ev], bound_evs[event_list[ev]][fn], false);
 			    }
